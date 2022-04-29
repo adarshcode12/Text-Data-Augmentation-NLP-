@@ -184,9 +184,6 @@ def main():
             st.write("SUMMARY OF THE GIVEN SENTENCE")
             st.write(summary_result)
 
-            # st.write("SIMILARITY BETWEEN ORIGINAL SENETENCE AND SUMMARIZE SENTENCE")
-            # st.write(similarity(article_text,summary_result))
-
     if choice == "Paraphrase Text":
         st.subheader("Paraphrase")
         article_text = st.text_area("Enter Text Here")
@@ -197,7 +194,7 @@ def main():
         article_text = re.sub("[A-Z]\Z",'',article_text)
         article_text = re.sub(r'\s+', ' ', article_text)
 
-        summary_choice = st.selectbox("Summary Choice" , ["seq2seq"])
+        summary_choice = st.selectbox("Paraphrase Choice" , ["seq2seq"])
         if st.button("Paraphrase Text"):
             paraphrase_result=paraphrasing(article_text)
             st.write("PARAPHRASE OF THE GIVEN SENTENCE")
@@ -220,22 +217,28 @@ def main():
         if st.button("Paraphrase + Summarization"):
             if summary_choice2 == 'NLTK':
                 paraphrase_result = paraphrasing(article_text)
+                original_summary = nltk_summarizer(article_text)
                 summary_result=nltk_summarizer(paraphrase_result)
                 st.write("PARAPHRASE OF THE GIVEN SENTENCE")
                 st.write(paraphrase_result)
+                st.write("SUMMARY OF THE GIVEN SENTENCE")
+                st.write(original_summary)
                 st.write("SUMMARY OF THE PARAPHRASED SENTENCE")
                 st.write(summary_result)
-                st.write("SIMILARITY BETWEEN PARAPHRASED SENTENCE AND SUMMARIZED SENTENCE")
-                st.write(similarity(paraphrase_result,summary_result))
+                st.write("SIMILARITY BETWEEN SUMMARY OF ORIGINAL SENTENCE AND SUMMARY OF PARAPHRASE SENTENCE")
+                st.write(similarity(original_summary,summary_result))
             if summary_choice2 == 'SPACY':
                 paraphrase_result = paraphrasing(article_text)
+                original_summary = spacy_summarizer(article_text)
                 summary_result=spacy_summarizer(paraphrase_result)
                 st.write("PARAPHRASE OF THE GIVEN SENTENCE")
                 st.write(paraphrase_result)
+                st.write("SUMMARY OF THE GIVEN SENTENCE")
+                st.write(original_summary)
                 st.write("SUMMARY OF THE PARAPHRASED SENTENCE")
                 st.write(summary_result)
-                st.write("SIMILARITY BETWEEN PARAPHRASED SENTENCE AND SUMMARIZED SENTENCE")
-                st.write(similarity(paraphrase_result,summary_result))
+                st.write("SIMILARITY BETWEEN SUMMARY OF ORIGINAL SENTENCE AND SUMMARY OF PARAPHRASE SENTENCE")
+                st.write(similarity(original_summary,summary_result))
        
 
 
