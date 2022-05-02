@@ -1,3 +1,5 @@
+
+   
 #run ---> streamlit run c:\pc\Desktop\impo.py  
 import re
 import streamlit as st
@@ -8,10 +10,13 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 import torch
 from transformers import PegasusForConditionalGeneration, PegasusTokenizer
+from nltk.stem import PorterStemmer
 #SPACY Packages
 import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
 from sentence_splitter import SentenceSplitter, split_text_into_sentences
+
+from summarizer import Summarizer
 
 
 
@@ -115,9 +120,59 @@ def spacy_summarizer(docx):
     summary = ' '.join(summary_sentences)
     return summary
 
+def similarity(doc1,doc2):
+    X_list = word_tokenize(doc1) 
+    Y_list = word_tokenize(doc2)
+    sw = stopwords.words('english') 
+
+    # remove stop words from the string
+    X_set = {w for w in X_list if not w in sw} 
+    Y_set = {w for w in Y_list if not w in sw}
+
+
+    ps = PorterStemmer()
+
+    l1 =[];l2 =[]
+    porter_stemmer1 = []
+    for w in X_set:
+        x = ps.stem(w)
+        porter_stemmer1.append(x)
+    
+    porter_stemmer2 = []
+    for w in Y_set:
+        x = ps.stem(w)
+        porter_stemmer2.append(x)
+  
+    
+    a_set = set(porter_stemmer1)
+    b_set= set(porter_stemmer2)
+    rvector = a_set.union(b_set) 
+    for w in rvector:
+        if w in a_set: l1.append(1) # create a vector
+        else: l1.append(0)
+        if w in b_set: l2.append(1)
+        else: l2.append(0)
+    c = 0
+    
+    # cosine formula 
+    for i in range(len(rvector)):
+            c+= l1[i]*l2[i]
+    cosine = c / float((sum(l1)*sum(l2))**0.5)
+    return cosine
+
+
+
+def Bert_summarization(body,no_sentence):
+    model = Summarizer()
+    result = model(body,  num_sentences=no_sentence)
+    full = ''.join(result)
+    return full
+
+
+
 def main():
-    st.title("Text Summarizer App")
-    activities = ["Summarize Via Text","Paraphrase Text"]
+    st.title("Text Data Augmentation")
+    activities = ["Summarize Via Text","Paraphrase Text","Paraphrase Text With Summarization"]
     choice = st.sidebar.selectbox("Select Activity", activities)
 
     if choice == 'Summarize Via Text':
@@ -130,18 +185,19 @@ def main():
         article_text = re.sub("[A-Z]\Z",'',article_text)
         article_text = re.sub(r'\s+', ' ', article_text)
 
-        summary_choice = st.selectbox("Summary Choice" , ["NLTK","SPACY"])
+        summary_choice = st.selectbox("Summary Choice" , ["NLTK","SPACY","BERT EXTRACTIVE"])
         if st.button("Summarize Via Text"):
             if summary_choice == 'NLTK':
                 summary_result = nltk_summarizer(article_text)
             elif summary_choice == 'SPACY':
                 summary_result = spacy_summarizer(article_text)
-
+            elif summary_choice== 'BERT EXTRACTIVE':
+                article_text1=6
+                summary_result = Bert_summarization(article_text,int(article_text1))
             st.write(summary_result)
-
     if choice == "Paraphrase Text":
         st.subheader("Paraphrase")
-        article_text = st.text_area("Enter Text Here","Type here")
+        article_text = st.text_area("Enter Text Here")
         #cleaning of input text
         article_text = re.sub(r'\\[[0-9]*\\]', ' ',article_text)
         article_text = re.sub('[^a-zA-Z.,]', ' ',article_text)
@@ -149,10 +205,64 @@ def main():
         article_text = re.sub("[A-Z]\Z",'',article_text)
         article_text = re.sub(r'\s+', ' ', article_text)
 
-        summary_choice = st.selectbox("Summary Choice" , ["seq2seq"])
+        summary_choice = st.selectbox("Paraphrase Choice" , ["seq2seq"])
         if st.button("Paraphrase Text"):
-            summary_result=paraphrasing(article_text)
-            st.write(summary_result)
+            paraphrase_result=paraphrasing(article_text)
+            st.write("PARAPHRASE OF THE GIVEN SENTENCE")
+            st.write(paraphrase_result)
+            st.write("SIMILARITY BETWEEN ORIGINAL SENTENCE AND PARAPHRASED SENTENCE")
+            st.write(similarity(article_text,paraphrase_result))
+    
+    if choice == "Paraphrase Text With Summarization":
+        st.subheader("Paraphrase With Summarization")
+        article_text = st.text_area("Enter Text Here")
+        #cleaning of input text
+        article_text = re.sub(r'\\[[0-9]*\\]', ' ',article_text)
+        article_text = re.sub('[^a-zA-Z.,]', ' ',article_text)
+        article_text = re.sub(r"\b[a-zA-Z]\b",'',article_text)
+        article_text = re.sub("[A-Z]\Z",'',article_text)
+        article_text = re.sub(r'\s+', ' ', article_text)
+
+        summary_choice = st.selectbox("Paraphrasing Choice" , ["seq2seq"])
+        summary_choice2 = st.selectbox("Summary Choice" , ["NLTK","SPACY","BERT EXTRACTIVE"])
+        if st.button("Paraphrase + Summarization"):
+            if summary_choice2 == 'NLTK':
+                paraphrase_result = paraphrasing(article_text)
+                original_summary = nltk_summarizer(article_text)
+                summary_result=nltk_summarizer(paraphrase_result)
+                st.write("PARAPHRASE OF THE GIVEN SENTENCE")
+                st.write(paraphrase_result)
+                st.write("SUMMARY OF THE GIVEN SENTENCE")
+                st.write(original_summary)
+                st.write("SUMMARY OF THE PARAPHRASED SENTENCE")
+                st.write(summary_result)
+                st.write("SIMILARITY BETWEEN SUMMARY OF ORIGINAL SENTENCE AND SUMMARY OF PARAPHRASE SENTENCE")
+                st.write(similarity(original_summary,summary_result))
+            if summary_choice2 == 'SPACY':
+                paraphrase_result = paraphrasing(article_text)
+                original_summary = spacy_summarizer(article_text)
+                summary_result=spacy_summarizer(paraphrase_result)
+                st.write("PARAPHRASE OF THE GIVEN SENTENCE")
+                st.write(paraphrase_result)
+                st.write("SUMMARY OF THE GIVEN SENTENCE")
+                st.write(original_summary)
+                st.write("SUMMARY OF THE PARAPHRASED SENTENCE")
+                st.write(summary_result)
+                st.write("SIMILARITY BETWEEN SUMMARY OF ORIGINAL SENTENCE AND SUMMARY OF PARAPHRASE SENTENCE")
+                st.write(similarity(original_summary,summary_result))
+            if summary_choice2== 'BERT EXTRACTIVE':
+                paraphrase_result = paraphrasing(article_text)
+                article_text1=6
+                original_summary = Bert_summarization(article_text,int(article_text1))
+                summary_result = Bert_summarization(paraphrase_result,int(article_text1))
+                st.write("PARAPHRASE OF THE GIVEN SENTENCE")
+                st.write(paraphrase_result)
+                st.write("SUMMARY OF THE GIVEN SENTENCE")
+                st.write(original_summary)
+                st.write("SUMMARY OF THE PARAPHRASED SENTENCE")
+                st.write(summary_result)
+                st.write("SIMILARITY BETWEEN SUMMARY OF ORIGINAL SENTENCE AND SUMMARY OF PARAPHRASE SENTENCE")
+                st.write(similarity(original_summary,summary_result))
        
 
 
